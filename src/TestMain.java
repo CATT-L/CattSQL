@@ -18,7 +18,7 @@ public class TestMain {
 
         CattSQL db = new CattSQL(dbSet);
 
-        String table = "song_img";
+        String table = "tt";
 //        db.select(table);
 //        db.select(table, 10, 0);
 //        db.select(table, 10, 10);
@@ -40,11 +40,13 @@ public class TestMain {
 //        List<Object> re = db.insert("song_img", list);
 //        System.out.println(re);
 
-        Map<String, String> map = new HashMap<>();
-        map.put("url", "sadjkslafj");
+        String[] delete = {
+          "1","2","3"
+        };
 
-        Object re = db.insert(table, map);
+        int re = db.delete(table, null, "");
         System.out.println(re);
+
 
     }
 }

@@ -11,8 +11,25 @@ import java.util.Map;
  *
  * 真的炒鸡方便 QAQ
  *
+ *
+ *
+ *
  * @author CATT-L
  * Created by CATT-L on 12/17/2017.
+ *
+ * ---
+ * 2017-12-18 12:17:45
+ * 增加了`更新记录`和`删除记录`
+ *
+ *      更新
+ *          update `table` set `k1`='v1',`k2`='v2' where (`k`='v');
+ *          update `table` set `k1`='v1',`k2`='v2' where (`wk1`='wv2' and `wk2`='wv2');
+ *
+ *      删除
+ *          delete from `table` where (`k`='v');
+ *          delete from `table` where (`k1`='v1' or `k2`='v2' or `k3`='v3');
+ *
+ * 今天天气好冷啊！ 10℃ !!! 冷死了冷死了 QAQ
  *
  * ---
  * 2017-12-17 17:26:12
@@ -462,33 +479,173 @@ public class CattSQL {
         }
     }
 
-    // TODO 还没有做完呐 QAQ
-    public Integer update_old(String table, String k, String v, Map<String, Object> data){
+    /**
+     * 更新记录
+     *
+     * update `table` set `k2`='v2',`k3`='v3' where (`k1`='v1');
+     * @param table         表名
+     * @param k             键名
+     * @param v             键值 缺省为空字符串
+     * @param data          更新键值对 缺省则不更新
+     * @return              返回受影响条数
+     *
+     * @throws CattSqlException     表名键名为空异常 数据库插入异常
+     */
+    public int update(String table, String k, String v, Map<String, String> data) throws CattSqlException{
 
-        // 参数判空
-        if(table == null || k == null || v == null || data == null) return null;
-        if(table.length() == 0 || data.size() == 0 || k.length() == 0 || v.length() == 0) return null;
+        // 参数判空 表名 键名
+        if(table == null || k == null || table.length() == 0 || k.length() == 0) throw new CattSqlException("表名和键名不能为空");
 
-        String nStr = "";
-        for (Map.Entry<String, Object> entry : data.entrySet()){
-            nStr += ",`"+entry.getKey()+"`='"+entry.getValue()+"'";
-        }
-        String sql = "update `"+table+"` set ";
-        sql += nStr.substring(1);
-        sql += " where (`"+k+"`='"+v+"');";
+        // 没有数据被传入 不需要更新 返回 0 条受到影响
+        if(data == null || data.size() == 0) return 0;
 
-        System.out.println(sql);
-        try{
-            PreparedStatement pstmt = (PreparedStatement) conn.prepareStatement(sql);
-            int re = pstmt.executeUpdate();
-            pstmt.close();
+        // 键值缺省 空字符串
+        if(v == null || v.length() == 0) v = "";
 
-            return re;
-        } catch(Exception e){
+        Map<String, String> where = new HashMap<>();
+        where.put(k, v);
 
-        }
-        return null;
+        return update(table, where, data);
     }
 
+    /**
+     * 多条件更新
+     *
+     * update `table` set `k1`='v1',`k2`='v2' where (`wk1`='wv2' and `wk2`='wv2');
+     *
+     * @param table         表名
+     * @param where         条件 键值对
+     * @param data          更新 键值对
+     * @return              受影响条数
+     * @throws CattSqlException     表名 条件为空异常, 数据库插入失败
+     */
+    public int update(String table, Map<String, String> where, Map<String, String> data) throws CattSqlException{
+
+        // 参数判空 表名 键名
+        if(table == null || where == null || table.length() == 0 || where.size() == 0) throw new CattSqlException("表名和条件不能为空");
+
+        // 没有数据被传入 不需要更新 返回 0 条受到影响
+        if(data == null || data.size() == 0) return 0;
+
+
+        // 构造更新段
+        String nStr = "";
+        for (Map.Entry<String, String> entry : data.entrySet()){
+
+            String k = entry.getKey();
+            String v = entry.getValue();
+
+            // 键值为空 跳过添加
+            if(k == null || k.length() == 0) continue;
+            // 键名缺省 空字符串
+            if(v == null) v = "";
+
+            nStr += ",`" + k + "`='" + v + "'";
+        }
+
+        // 没有内容需要更新
+        if(nStr.length() == 0) return 0;
+
+        nStr = nStr.substring(1);
+
+        // 构造条件段
+        String wStr = "";
+        for(Map.Entry<String, String> entry : where.entrySet()){
+            String k = entry.getKey();
+            String v = entry.getValue();
+
+            // 键名为空 跳过此次添加
+            if(k == null || k.length() == 0) continue;
+            // 键值缺省空字符串
+            if(v == null) v = "";
+
+            wStr += " and `" + k + "`='" + v + "'";
+        }
+
+        if (wStr.length() == 0) throw new CattSqlException("条件不能为空");
+
+        wStr = "where (" + wStr.substring(5) + ")";
+
+        String sql = "update `"+table+"` set";
+        sql += " " + nStr;
+        sql += " " + wStr;
+        sql += ";";
+
+        try{
+            PreparedStatement ps = conn.prepareStatement(sql);
+            int re = ps.executeUpdate();
+            ps.close();
+
+            // 记录sql
+            this.sql = sql;
+            return re;
+
+        } catch(Exception e){
+            e.printStackTrace();
+            throw new CattSqlException("数据库更新失败了 QAQ");
+        }
+    }
+
+    /**
+     * 多条删除
+     *
+     * delete from `table` where (`k1`='v1' or `k2`='v2' or `k3`='v3');
+     *
+     * @param table     表名
+     * @param k         键名
+     * @param v         键值数组
+     * @return          受影响条数
+     *
+     * @throws CattSqlException     表名为空, 键名为空, 执行异常
+     */
+    public int delete(String table, String k, String[] v) throws CattSqlException{
+
+        if(table == null || table.length() == 0 || k == null || k.length() == 0) throw new CattSqlException("表名和键名不能为空");
+
+        // 没有数据需要被删除
+        if(v.length == 0) return 0;
+
+        String wStr = "";
+        for(int i = 0; i < v.length; i++){
+            // 缺省 空字符
+            if(v[i] == null) v[i] = "";
+            wStr += " or `" + k + "`='" + v[i] + "'";
+        }
+        wStr = "where (" + wStr.substring(4) + ")";
+
+        String sql = "delete from `" + table + "` " + wStr + ";";
+
+        try{
+            PreparedStatement ps = conn.prepareStatement(sql);
+            int re = ps.executeUpdate();
+            ps.close();
+
+            // 记录sql
+            this.sql = sql;
+            return re;
+
+        } catch(Exception e){
+            e.printStackTrace();
+            throw new CattSqlException("数据库更新失败了 QAQ");
+        }
+    }
+
+    /**
+     * 单条删除
+     *
+     * delete from `tt` where (`k`='v');
+     *
+     * @param table         表名
+     * @param k             键名
+     * @param v             键值
+     * @return              受影响条数
+     *
+     * @throws CattSqlException     异常
+     */
+    public int delete(String table, String k, String v) throws CattSqlException{
+
+        String[] vrr = {v};
+        return delete(table, k, vrr);
+    }
 
 }
