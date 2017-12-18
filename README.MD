@@ -120,12 +120,12 @@ db = new CattSQL(dbConf);
 也就是更新了下面的语句  
 
 > * 更新
->	```java
+>	```sql
 >     update `table` set `k1`='v1',`k2`='v2' where (`k`='v');
 >     update `table` set `k1`='v1',`k2`='v2' where (`wk1`='wv2' and `wk2`='wv2');
 >	```
 > * 删除
->	```java
+>	```sql
 >     delete from `table` where (`k`='v');
 >     delete from `table` where (`k1`='v1' or `k2`='v2' or `k3`='v3')
 >	```
