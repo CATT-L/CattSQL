@@ -138,7 +138,7 @@ db = new CattSQL(dbConf);
 目前能实现如下语句  
 
 > * 查询
->	```java
+>	```sql
 >     select * from `table`;
 >     select * from `table` limit offset,num;
 >     select * from `table` where `key`='value';
@@ -146,7 +146,7 @@ db = new CattSQL(dbConf);
 >     select * from `table` where `key`='value' limit offset,num;
 >	```
 > * 插入
->	```java
+>	```sql
 >     insert into `table` (`k1`,`k2`,`k3`) values('v1','v2','v3');
 >     insert into `table` (`k1`,`k2`,`k3`) values('v11','v12','v13'),('v21','v22','v23'),('v31','v32','v33');
 >	```
