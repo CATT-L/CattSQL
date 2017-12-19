@@ -13,9 +13,15 @@ import java.util.Map;
  *
  *
  *
- *
  * @author CATT-L
  * Created by CATT-L on 12/17/2017.
+ *
+ * ---
+ * 2017-12-19 14:13:05
+ * 增加了`列出表`和`删除表`
+ *
+ *      show tables;
+ *      drop table `table`;
  *
  * ---
  * 2017-12-18 12:17:45
@@ -182,9 +188,7 @@ public class CattSQL {
                         + ":" + this.dbPort
                         + "/" + this.dbName;
         try {
-            Connection conn = DriverManager.getConnection(url, this.dbUser, this.dbPass);
-            this.conn = conn;
-
+            this.conn = DriverManager.getConnection(url, this.dbUser, this.dbPass);
         } catch (SQLException e) {
             throw new CattSqlException("连接数据库失败");
         }
@@ -218,7 +222,9 @@ public class CattSQL {
      * @return          键值对列表
      * @throws CattSqlException     表名为空或查询异常
      */
-    public List<Map<String, Object>> select(String table, int num, int offset, String k, String v) throws CattSqlException{
+    public List<Map<String, String>> select(String table, int num, int offset, String k, String v) throws CattSqlException{
+
+        if(this.conn == null) connect();
 
         if(table == null || table.length() == 0) throw new CattSqlException("表名不能为空");
 
@@ -254,14 +260,14 @@ public class CattSQL {
             }
 
             // 存放结果
-            List<Map<String, Object>> list = new ArrayList<>();
+            List<Map<String, String>> list = new ArrayList<>();
 
             do{
                 // 封装数据
-                Map<String, Object> map = new HashMap<>();
+                Map<String, String> map = new HashMap<>();
                 for(int i = 0; i < colNum; i++){
                     String _k = colName[i];
-                    Object _v = rs.getObject(i+1);
+                    String _v = rs.getString(i+1);
                     map.put(_k, _v);
                 }
 
@@ -294,10 +300,10 @@ public class CattSQL {
      * @return          单条数据 键值对
      * @throws CattSqlException     表名键名为空或查询异常
      */
-    public Map<String, Object> selectOne(String table, String k, String v) throws CattSqlException{
+    public Map<String, String> selectOne(String table, String k, String v) throws CattSqlException{
 
         // 查询且仅查询一条数据
-        List<Map<String, Object>> list = select(table, 1, 0, k, v);
+        List<Map<String, String>> list = select(table, 1, 0, k, v);
 
         if(list != null) return list.get(0);
         else return null;
@@ -313,7 +319,7 @@ public class CattSQL {
      * @param v         value
      * @return          结果数组
      */
-    public List<Map<String, Object>> select(String table, String k, String v) throws CattSqlException{
+    public List<Map<String, String>> select(String table, String k, String v) throws CattSqlException{
 
         return select(table, 0, 0, k, v);
     }
@@ -328,7 +334,7 @@ public class CattSQL {
      * @param offset        偏移
      * @return              结果数组
      */
-    public List<Map<String, Object>> select(String table, int num, int offset) throws CattSqlException{
+    public List<Map<String, String>> select(String table, int num, int offset) throws CattSqlException{
         return select(table, num, offset, null, null);
     }
 
@@ -340,7 +346,7 @@ public class CattSQL {
      * @param table     表名
      * @return          结果
      */
-    public List<Map<String, Object>> select(String table) throws CattSqlException{
+    public List<Map<String, String>> select(String table) throws CattSqlException{
         return select(table, 0, 0, null, null);
     }
 
@@ -356,6 +362,8 @@ public class CattSQL {
      * @throws CattSqlException     抛出异常
      */
     public String insert(String table, Map<String, String> data) throws CattSqlException{
+
+        if(this.conn == null) connect();
 
         // 表名判空
         if(table == null || table.length() == 0) throw new CattSqlException("表名不能为空");
@@ -419,7 +427,10 @@ public class CattSQL {
      *
      * @throws CattSqlException     抛出异常
      */
-    public List<Object> insert(String table, String[][] list) throws CattSqlException{
+    public List<String> insert(String table, String[][] list) throws CattSqlException{
+
+        if(this.conn == null) connect();
+
         if(table == null || table.length() == 0) throw new CattSqlException("表名不能为空");
 
         // 数组空
@@ -456,7 +467,7 @@ public class CattSQL {
         try{
             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-            List<Object> key = null;
+            List<String> key = null;
 
             // 记录主键
             if(ps.executeUpdate() > 0){
@@ -464,7 +475,7 @@ public class CattSQL {
 
                 ResultSet rs = ps.getGeneratedKeys();
                 while(rs.next()){
-                    key.add(rs.getObject(1));
+                    key.add(rs.getString(1));
                 }
                 rs.close();
             }
@@ -520,6 +531,8 @@ public class CattSQL {
      * @throws CattSqlException     表名 条件为空异常, 数据库插入失败
      */
     public int update(String table, Map<String, String> where, Map<String, String> data) throws CattSqlException{
+
+        if(this.conn == null) connect();
 
         // 参数判空 表名 键名
         if(table == null || where == null || table.length() == 0 || where.size() == 0) throw new CattSqlException("表名和条件不能为空");
@@ -600,6 +613,8 @@ public class CattSQL {
      */
     public int delete(String table, String k, String[] v) throws CattSqlException{
 
+        if(this.conn == null) connect();
+
         if(table == null || table.length() == 0 || k == null || k.length() == 0) throw new CattSqlException("表名和键名不能为空");
 
         // 没有数据需要被删除
@@ -646,6 +661,106 @@ public class CattSQL {
 
         String[] vrr = {v};
         return delete(table, k, vrr);
+    }
+
+    /**
+     * 获取数据库表格列表
+     *
+     * show tables;
+     *
+     * @return      表名列表
+     * @throws CattSqlException     数据库查询异常
+     */
+    public List<String> getTables() throws CattSqlException{
+        if(this.conn == null) connect();
+
+        String sql = "show tables;";
+
+        List<String> list = new ArrayList<>();
+        try{
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()){
+                list.add(rs.getString(1));
+            }
+
+            rs.close();
+            ps.close();
+
+            this.sql = sql;
+            return list;
+        } catch (Exception e){
+            e.printStackTrace();
+            throw new CattSqlException("数据库查询失败");
+        }
+    }
+
+    /**
+     * 删除表格
+     *
+     * drop table `table`;
+     *
+     * @param table     表名
+     * @throws CattSqlException     删除异常 通常是表名不存在
+     */
+    public void dropTable(String table) throws CattSqlException{
+
+        if(this.conn == null) connect();
+
+        String sql = "drop table `" + table + "`;";
+
+        try{
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.executeUpdate();
+
+            this.sql = sql;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new CattSqlException("删除数据库失败");
+        }
+    }
+
+    /**
+     * 关闭数据库连接
+     */
+    public void release() throws CattSqlException{
+        if(this.conn == null) return;
+
+        try {
+            conn.close();
+            this.conn = null;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new CattSqlException("关闭连接失败");
+        }
+    }
+
+    /**
+     * 获取数据库连接对象
+     *
+     * 对于复杂的SQL语句, 可以通过获取Connection对象, 然后再执行SQL语句.
+     * 这个connection是新的对象, 所以在使用后要记得释放掉
+     *
+     * @return      Connection 对象
+     * @throws CattSqlException
+     */
+    public Connection getConn() throws CattSqlException{
+
+        if(conn != null){
+
+            String url = "jdbc:mysql://" + this.dbHost
+                    + ":" + this.dbPort
+                    + "/" + this.dbName;
+
+            try {
+                return DriverManager.getConnection(url, this.dbUser, this.dbPass);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                throw new CattSqlException("数据库连接失败");
+            }
+        } else throw new CattSqlException("数据库连接失败");
+
     }
 
 }
