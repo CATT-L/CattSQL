@@ -291,7 +291,7 @@ db = new CattSQL(dbConf);
 
 ---
 2017-12-19 14:13:05
-增加了`列出表`和`删除表`
+增加了`列出表`和`删除表`  
 	```sql
      show tables;
      drop table `table`;
